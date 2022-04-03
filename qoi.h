@@ -437,6 +437,7 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 			run++;
 			if (run == 62 || px_pos == px_end) {
 				bytes[p++] = QOI_OP_RUN | (run - 1);
+				printf("RUN %d\n", (run-1));
 				run = 0;
 			}
 		}
@@ -445,6 +446,7 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 
 			if (run > 0) {
 				bytes[p++] = QOI_OP_RUN | (run - 1);
+				printf("RUN %d\n", (run-1));
 				run = 0;
 			}
 
@@ -452,6 +454,7 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 
 			if (index[index_pos].v == px.v) {
 				bytes[p++] = QOI_OP_INDEX | index_pos;
+				printf("INDEX %d\n", index_pos);
 			}
 			else {
 				index[index_pos] = px;
@@ -470,6 +473,7 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 						vb > -3 && vb < 2
 					) {
 						bytes[p++] = QOI_OP_DIFF | (vr + 2) << 4 | (vg + 2) << 2 | (vb + 2);
+						printf("DIFF %d %d %d\n", vr, vg, vb);
 					}
 					else if (
 						vg_r >  -9 && vg_r <  8 &&
@@ -478,12 +482,14 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 					) {
 						bytes[p++] = QOI_OP_LUMA     | (vg   + 32);
 						bytes[p++] = (vg_r + 8) << 4 | (vg_b +  8);
+						printf("LUMA %d %d %d\n", vg, vg_r, vg_b);
 					}
 					else {
 						bytes[p++] = QOI_OP_RGB;
 						bytes[p++] = px.rgba.r;
 						bytes[p++] = px.rgba.g;
 						bytes[p++] = px.rgba.b;
+						printf("RGB %02x %02x %02x\n", bytes[p-3], bytes[p-2], bytes[p-1]);
 					}
 				}
 				else {
@@ -492,6 +498,7 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 					bytes[p++] = px.rgba.g;
 					bytes[p++] = px.rgba.b;
 					bytes[p++] = px.rgba.a;
+					printf("RGBA %02x %02x %02x %02x\n", bytes[p-4], bytes[p-3], bytes[p-2], bytes[p-1]);
 				}
 			}
 		}
