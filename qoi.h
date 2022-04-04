@@ -373,6 +373,7 @@ static unsigned int qoi_read_32(const unsigned char *bytes, int *p) {
 	return a << 24 | b << 16 | c << 8 | d;
 }
 
+#ifndef QOI_FPGA_IMPLEMENTATION
 void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 	int i, max_size, p, run;
 	int px_len, px_end, px_pos, channels;
@@ -617,6 +618,7 @@ void *qoi_decode(const void *data, int size, qoi_desc *desc, int channels) {
 
 	return pixels;
 }
+#endif /* !QOI_FPGA_IMPLEMENTATION */
 
 #ifndef QOI_NO_STDIO
 #include <stdio.h>
