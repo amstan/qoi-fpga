@@ -577,20 +577,24 @@ void *qoi_decode(const void *data, int size, qoi_desc *desc, int channels) {
 				px.rgba.r = bytes[p++];
 				px.rgba.g = bytes[p++];
 				px.rgba.b = bytes[p++];
+				printf("RGB %02x %02x %02x ", bytes[p-3], bytes[p-2], bytes[p-1]);
 			}
 			else if (b1 == QOI_OP_RGBA) {
 				px.rgba.r = bytes[p++];
 				px.rgba.g = bytes[p++];
 				px.rgba.b = bytes[p++];
 				px.rgba.a = bytes[p++];
+				printf("RGBA %02x %02x %02x %02x ", bytes[p-4], bytes[p-3], bytes[p-2], bytes[p-1]);
 			}
 			else if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
 				px = index[b1];
+				printf("INDEX %d ", b1);
 			}
 			else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
 				px.rgba.r += ((b1 >> 4) & 0x03) - 2;
 				px.rgba.g += ((b1 >> 2) & 0x03) - 2;
 				px.rgba.b += ( b1       & 0x03) - 2;
+				printf("DIFF %d %d %d ", ((b1 >> 4) & 0x03) - 2, ((b1 >> 2) & 0x03) - 2, (b1 & 0x03) - 2);
 			}
 			else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
 				int b2 = bytes[p++];
@@ -598,9 +602,11 @@ void *qoi_decode(const void *data, int size, qoi_desc *desc, int channels) {
 				px.rgba.r += vg - 8 + ((b2 >> 4) & 0x0f);
 				px.rgba.g += vg;
 				px.rgba.b += vg - 8 +  (b2       & 0x0f);
+				printf("LUMA %d %d %d ", vg, vg - 8 + ((b2 >> 4) & 0x0f), vg - 8 +  (b2       & 0x0f));
 			}
 			else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
 				run = (b1 & 0x3f);
+				printf("RUN %d ", run);
 			}
 
 			index[QOI_COLOR_HASH(px) % 64] = px;
@@ -614,6 +620,8 @@ void *qoi_decode(const void *data, int size, qoi_desc *desc, int channels) {
 			pixels[px_pos + 1] = px.rgba.g;
 			pixels[px_pos + 2] = px.rgba.b;
 		}
+
+		printf("px = %08x\n", px.v);
 	}
 
 	return pixels;
