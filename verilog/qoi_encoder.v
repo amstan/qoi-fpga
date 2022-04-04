@@ -1,11 +1,11 @@
-`define QOI_OP_INDEX  8'h00 /* 00xxxxxx */
-`define QOI_OP_DIFF   8'h40 /* 01xxxxxx */
-`define QOI_OP_LUMA   8'h80 /* 10xxxxxx */
-`define QOI_OP_RUN    8'hc0 /* 11xxxxxx */
-`define QOI_OP_RGB    8'hfe /* 11111110 */
-`define QOI_OP_RGBA   8'hff /* 11111111 */
+`define QOI_OP_INDEX  2'b00       /* 0x00 */
+`define QOI_OP_DIFF   2'b01       /* 0x40 */
+`define QOI_OP_LUMA   2'b10       /* 0x80 */
+`define QOI_OP_RUN    2'b11       /* 0xc0 */
+`define QOI_OP_RGB    8'b11111110 /* 0xfe */
+`define QOI_OP_RGBA   8'b11111111 /* 0xff */
 
-`define QOI_MASK_2    8'hc0 /* 11000000 */
+`define QOI_MASK_2    8'b11000000 /* 0xc0 */
 
 module qoi_encoder(
 	input wire[7:0] r,
@@ -56,13 +56,13 @@ wire[5:0] index_pos = r * 3 + g * 5 + b * 7 + a * 11;
 always @ (posedge clk, posedge rst) begin
 	if (is_repeating) begin /* QOI_OP_RUN */
 		// For debugging: uncomment. For power-saving: comment
-		next_chunk[0] <= (`QOI_OP_RUN | run); // Dummy
+		next_chunk[0] <= {`QOI_OP_RUN, run}; // Dummy
 		// This chunk is not over, let output know not to expect anything yet
 		next_chunk_len <= 0;
 		run <= run + 1;
 
 	end else if (index[index_pos] == px) begin
-		next_chunk[0] <= (`QOI_OP_INDEX | index_pos);
+		next_chunk[0] <= {`QOI_OP_INDEX, index_pos};
 		next_chunk_len <= 1;
 
 	end else if (prev_a != a) begin
@@ -78,8 +78,7 @@ always @ (posedge clk, posedge rst) begin
 		vg > -3 && vg < 2 &&
 		vb > -3 && vb < 2
 	) begin
-		next_chunk[0] <=
-			`QOI_OP_DIFF | 8'(vr + 2) << 4 | 8'(vg + 2) << 2 | 8'(vb + 2);
+		next_chunk[0] <= {`QOI_OP_DIFF, 2'(vr + 2), 2'(vg + 2), 2'(vb + 2)};
 		next_chunk_len <= 1;
 
 	end else if (
@@ -87,8 +86,8 @@ always @ (posedge clk, posedge rst) begin
 		vg   > -33 && vg   < 32 &&
 		vg_b >  -9 && vg_b <  8
 	) begin
-		next_chunk[0] <= `QOI_OP_LUMA | 8'(vg + 32);
-		next_chunk[1] <= 8'(vg_r + 8) << 4 | 8'(vg_b +  8);
+		next_chunk[0] <= {`QOI_OP_LUMA, 6'(vg + 32)};
+		next_chunk[1] <= {4'(vg_r + 8), 4'(vg_b +  8)};
 		next_chunk_len <= 2;
 
 	end else begin
@@ -110,7 +109,7 @@ always @ (posedge clk, posedge rst) begin
 	chunk_len <= next_chunk_len;
 	if (((run > 0) && !is_repeating) || (run == 62)) begin
 		run <= is_repeating; // count the current repeat, otherwise start from 0
-		chunk[0] <= `QOI_OP_RUN | 8'(run-1);
+		chunk[0] <= {`QOI_OP_RUN, 6'(run - 1)};
 		chunk_len <= 1;
 	end
 
