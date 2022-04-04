@@ -4,7 +4,7 @@ QOI - The “Quite OK Image Format” for fast, lossless image compression.
 
 More info at https://qoiformat.org.
 
-# QOI targeted to FPGAs!
+# QOI targeted to FPGAs
 
 ## Verilog
 
@@ -14,10 +14,10 @@ Verilator will be able to adapt the functionality enough for it to be a
 drop in replacement for some of the reference implementation.
 
 Run `make VERILATED=1 test`, it will convert an image to qoi and then use the
-system converted to convert back (both ours and another reference .qoi). The
+system converter to convert back (both ours and another reference .qoi). The
 md5sums of the resulting png files should match (it should mean all pixels
-survived being encoded), the md5sums of the .qoi files ideally should also
-match if it's a full featured encoder.
+survived being encoded), the md5sums of the .qoi files should also match if
+it's a full featured encoder.
 
 ## LiteX
 
@@ -27,16 +27,21 @@ Coming soon!
 
 ### Encoder
 
+100% Implemented.
+
 #### Input
 
-This is just the RGB pixel data with a clock.
-
-Let's hardcode it to just RGB to keep things simple.
+This is just the RGBA pixel data with a clock.
 
 #### Output
 
-This will eventually need to connect to some kind of bus like AXI or Avalon.
-Not really sure how to deal with the variable length output from the encoder.
+The encoder will usually output a whole QOI chunk (1-5 bytes), though delayed
+by one clock cycle (to account for any QUI_OP_RUN). If Alpha is not needed
+the max chunk size is 4 bytes, which might fit in a single memory transaction.
 
-For now we'll just have the output bytes with a length and some kind of ready
-signal. I'm sure that'll be adaptable somehow.
+This will eventually need to connect to some kind of bus like AXI or Avalon.
+Not really sure how to deal with the variable length output from the encoder yet.
+
+### Decoder
+
+TODO
