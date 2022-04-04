@@ -15,13 +15,14 @@ void fpga_encode_chunk(Vqoi_encoder *enc, qoi_rgba_t px, unsigned char *bytes, i
 	enc->r = px.rgba.r;
 	enc->g = px.rgba.g;
 	enc->b = px.rgba.b;
+	enc->a = px.rgba.a;
 	enc->eval();
 	enc->clk = 0;
 	enc->eval();
 	enc->clk = 1;
 	enc->eval();
 
-	printf("p=%d rgb%06x %d %08x\n", *p, px.v&0xffffff, enc->chunk_bytes, enc->chunk);
+	printf("p=%d rgba=%08x %d %08x\n", *p, px.v, enc->chunk_bytes, enc->chunk);
 
 	if (enc->chunk_bytes) {
 		qoi_write_32(bytes, p, enc->chunk);

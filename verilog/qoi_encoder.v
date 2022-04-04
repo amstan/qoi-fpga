@@ -11,6 +11,8 @@ module qoi_encoder(
 	input wire[7:0] r,
 	input wire[7:0] g,
 	input wire[7:0] b,
+	input wire[7:0] a,
+
 	input wire clk,
 	input wire rst,
 
@@ -18,7 +20,7 @@ module qoi_encoder(
 	output reg[2:0] chunk_bytes
 );
 
-wire[31:0] px = {r, g, b, 8'(0)};
+wire[31:0] px = {r, g, b, a};
 
 // QOI_OP_DIFF + QOI_OP_LUMA
 reg[7:0] prev_r;
@@ -36,15 +38,22 @@ wire signed[7:0] vg_b = vb - vg;
 // QOI_OP_RUN
 // We need to delay chunk output by one pixel because we cannot emit 2 chunks
 // per pixel like software does when the run ends.
-wire is_repeating = {prev_r, prev_g, prev_b, 8'(0)} == px;
+reg[7:0] prev_a;
+wire is_repeating = {prev_r, prev_g, prev_b, prev_a} == px;
 reg[31:0] next_chunk;
 reg[2:0] next_chunk_bytes;
 reg[5:0] run;
+
+// QOI_OP_INDEX
+// previously seen pixel array, indexed by hash of the color
+reg[31:0] index[63:0];
+wire[5:0] index_pos = r * 3 + g * 5 + b * 7 + a * 11;
 
 always @ (posedge clk) begin
 	prev_r <= r;
 	prev_g <= g;
 	prev_b <= b;
+	prev_a <= a;
 
 	if (is_repeating) begin /* QOI_OP_RUN */
 		// For debugging: uncomment. For power-saving: comment
@@ -52,6 +61,10 @@ always @ (posedge clk) begin
 		// This chunk is not over, let output know not to expect anything yet
 		next_chunk_bytes <= 0;
 		run <= run + 1;
+
+	end else if (index[index_pos] == px) begin
+		next_chunk <= (`QOI_OP_INDEX | index_pos) << 24;
+		next_chunk_bytes <= 1;
 
 	end else if (
 		vr > -3 && vr < 2 &&
@@ -81,10 +94,12 @@ always @ (posedge clk) begin
 		next_chunk_bytes <= 4;
 	end
 
+	index[index_pos] <= px;
+
 	chunk <= next_chunk;
 	chunk_bytes <= next_chunk_bytes;
 	if (((run > 0) && !is_repeating) || (run == 62)) begin
-		run <= is_repeating; // count the current one, otherwise start from 0
+		run <= is_repeating; // count the current repeat, otherwise start from 0
 		chunk <= {`QOI_OP_RUN | 8'(run-1), 24'(0)};
 		chunk_bytes <= 1;
 	end
