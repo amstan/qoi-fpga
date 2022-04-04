@@ -1,7 +1,6 @@
 #include <stdio.h>
 
 #define QOI_IMPLEMENTATION
-#define QOI_FPGA_IMPLEMENTATION
 #define QOI_NO_STDIO // We just want the qoi aux internal headers
 #include "qoi.h"
 
@@ -11,6 +10,8 @@
 #define QOI_FPGA_ENCODER_POST_CYCLES 1
 
 void fpga_encode_chunk(Vqoi_encoder *enc, qoi_rgba_t px, unsigned char *bytes, int *p) {
+	int i;
+
 	enc->eval();
 	enc->r = px.rgba.r;
 	enc->g = px.rgba.g;
@@ -22,18 +23,21 @@ void fpga_encode_chunk(Vqoi_encoder *enc, qoi_rgba_t px, unsigned char *bytes, i
 	enc->clk = 1;
 	enc->eval();
 
-	printf("p=%d rgba=%08x %d %08x\n", *p, px.v, enc->chunk_bytes, enc->chunk);
+	printf("p=%d rgba=%08x %d ", *p, px.v, enc->chunk_len);
 
-	if (enc->chunk_bytes) {
-		qoi_write_32(bytes, p, enc->chunk);
-		// rewind the bytes that we shouldn't have copied.
-		*p -= 4 - enc->chunk_bytes;
+	for (i = 0; i < enc->chunk_len; i++) {
+		bytes[(*p)++] = enc->chunk[i];
+		printf("%02x", enc->chunk[i]);
 	}
+	printf("|");
+	for (;i < 5; i++)
+		printf("%02x", enc->chunk[i]);
+	printf("\n");
 }
 
 void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 	int i, max_size, p;
-	int px_len, px_end, px_pos, channels;
+	int px_len, px_pos, channels;
 	unsigned char *bytes;
 	const unsigned char *pixels;
 	qoi_rgba_t px;
@@ -67,9 +71,12 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 	pixels = (const unsigned char *)data;
 
 	Vqoi_encoder *enc = new Vqoi_encoder;
+	enc->rst = 1;
+	enc->eval();
+	enc->rst = 0;
+	enc->eval();
 
 	px_len = desc->width * desc->height * desc->channels;
-	px_end = px_len - desc->channels;
 	channels = desc->channels;
 
 	for (px_pos = 0; px_pos < px_len; px_pos += channels) {
@@ -86,8 +93,8 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 	}
 
 	for (i = 0; i < QOI_FPGA_ENCODER_POST_CYCLES; i++) {
-		px.v = 0xbadbee;
-		fpga_encode_chunk(enc, px /* dummy now */, bytes, &p);
+		px.v = 0xfeedbeef; /* send dummy pixels now */
+		fpga_encode_chunk(enc, px, bytes, &p);
 	}
 
 	for (i = 0; i < (int)sizeof(qoi_padding); i++) {

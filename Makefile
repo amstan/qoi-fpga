@@ -1,13 +1,14 @@
-CFLAGS += -I/usr/include/stb/
+CFLAGS += -I/usr/include/stb/ -Wall -Wno-unused-function
 
 .PHONY: all
 all: qoiconv qoibench
 
+TEST?=images/testcard
 .PHONY: test
 test: qoiconv
-	./qoiconv images/testcard.png /tmp/ours.qoi
-	md5sum /tmp/ours.qoi images/testcard.qoi
-	qoiconv images/testcard.qoi /tmp/theirs.png
+	./qoiconv ${TEST}.png /tmp/ours.qoi
+	md5sum /tmp/ours.qoi ${TEST}.qoi
+	qoiconv ${TEST}.qoi /tmp/theirs.png
 	qoiconv /tmp/ours.qoi /tmp/ours.png
 	md5sum /tmp/ours.png /tmp/theirs.png
 
@@ -35,7 +36,7 @@ clean:
 
 ## Verilog via Verilator
 
-# VFLAGS ?= -Wall
+VFLAGS ?= -Wall
 
  # These are inane, something as simple as (var == 25) ? : will warn with this on
 VFLAGS += -Wno-WIDTH
@@ -48,7 +49,7 @@ build/verilated.o: /usr/share/verilator/include/verilated.cpp
 	g++ -I /usr/share/verilator/include -I build $^ -c -o $@
 
 build/qoi_verilator_shim.o: qoi_verilator_shim.c build/Vqoi_encoder__ALL.a
-	g++ -I /usr/share/verilator/include -I build $< -c -o $@
+	g++ -I /usr/share/verilator/include -I build ${CFLAGS} $< -c -o $@
 
 ifdef VERILATED
 CFLAGS += -DQOI_FPGA_IMPLEMENTATION
