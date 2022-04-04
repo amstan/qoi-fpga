@@ -41,6 +41,16 @@ always @ (posedge clk) begin
 	) begin
 		out <= (`QOI_OP_DIFF | 8'(vr + 2) << 4 | 8'(vg + 2) << 2 | 8'(vb + 2)) << 24;
 		out_bytes <= 1;
+
+	end else if (
+		vg_r >  -9 && vg_r <  8 &&
+		vg   > -33 && vg   < 32 &&
+		vg_b >  -9 && vg_b <  8
+	) begin
+		out <= (`QOI_OP_LUMA | 8'(vg   + 32)) << 24 |
+		       (8'(vg_r + 8) << 4 | 8'(vg_b +  8)) << 16;
+		out_bytes <= 2;
+
 	end else begin
 		out <= {`QOI_OP_RGB, r, g, b};
 		out_bytes <= 4;
