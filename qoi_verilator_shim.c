@@ -8,6 +8,28 @@
 #include "verilated.h"
 #include "Vqoi_encoder.h"
 
+#define QOI_FPGA_ENCODER_POST_CYCLES 1
+
+void fpga_encode_chunk(Vqoi_encoder *enc, qoi_rgba_t px, unsigned char *bytes, int *p) {
+	enc->eval();
+	enc->r = px.rgba.r;
+	enc->g = px.rgba.g;
+	enc->b = px.rgba.b;
+	enc->eval();
+	enc->clk = 0;
+	enc->eval();
+	enc->clk = 1;
+	enc->eval();
+
+	printf("p=%d rgb%06x %d %08x\n", *p, px.v&0xffffff, enc->chunk_bytes, enc->chunk);
+
+	if (enc->chunk_bytes) {
+		qoi_write_32(bytes, p, enc->chunk);
+		// rewind the bytes that we shouldn't have copied.
+		*p -= 4 - enc->chunk_bytes;
+	}
+}
+
 void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 	int i, max_size, p;
 	int px_len, px_end, px_pos, channels;
@@ -59,22 +81,12 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 			px.rgba.b = pixels[px_pos + 2];
 		}
 
-		enc->eval();
-		enc->r = px.rgba.r;
-		enc->g = px.rgba.g;
-		enc->b = px.rgba.b;
-		enc->eval();
-		enc->clk = 0;
-		enc->eval();
-		enc->clk = 1;
-		enc->eval();
+		fpga_encode_chunk(enc, px, bytes, &p);
+	}
 
-		printf("%d %d %08x\n", p, enc->out_bytes, enc->out);
-		if (enc->out_bytes) {
-			qoi_write_32(bytes, &p, enc->out);
-			// rewind the bytes that we shouldn't have copied.
-			p -= 4 - enc->out_bytes;
-		}
+	for (i = 0; i < QOI_FPGA_ENCODER_POST_CYCLES; i++) {
+		px.v = 0xbadbee;
+		fpga_encode_chunk(enc, px /* dummy now */, bytes, &p);
 	}
 
 	for (i = 0; i < (int)sizeof(qoi_padding); i++) {
