@@ -5,8 +5,6 @@
 `define QOI_OP_RGB    8'b11111110 /* 0xfe */
 `define QOI_OP_RGBA   8'b11111111 /* 0xff */
 
-`define QOI_MASK_2    8'b11000000 /* 0xc0 */
-
 module qoi_encoder(
 	input wire[7:0] r,
 	input wire[7:0] g,

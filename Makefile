@@ -4,12 +4,19 @@ CFLAGS += -I/usr/include/stb/ -Wall -Wno-unused-function
 all: qoiconv qoibench
 
 TEST?=images/testcard
-.PHONY: test
-test: qoiconv
+
+.PHONY: test_encode
+test_encode: qoiconv
 	./qoiconv ${TEST}.png /tmp/ours.qoi
 	md5sum /tmp/ours.qoi ${TEST}.qoi
 	qoiconv ${TEST}.qoi /tmp/theirs.png
 	qoiconv /tmp/ours.qoi /tmp/ours.png
+	md5sum /tmp/ours.png /tmp/theirs.png
+
+.PHONY: test_decode
+test_decode: qoiconv
+	./qoiconv ${TEST}.qoi /tmp/ours.png
+	qoiconv ${TEST}.qoi /tmp/theirs.png
 	md5sum /tmp/ours.png /tmp/theirs.png
 
 .PHONY: fuzz
@@ -36,7 +43,7 @@ clean:
 
 ## Verilog via Verilator
 
-VFLAGS ?= -Wall
+# VFLAGS ?= -Wall
 
  # These are inane, something as simple as (var == 25) ? : will warn with this on
 VFLAGS += -Wno-WIDTH
@@ -48,11 +55,11 @@ build/V%__ALL.o: verilog/%.v
 build/verilated.o: /usr/share/verilator/include/verilated.cpp
 	g++ -I /usr/share/verilator/include -I build $^ -c -o $@
 
-build/qoi_verilator_shim.o: qoi_verilator_shim.c build/Vqoi_encoder__ALL.a
+build/qoi_verilator_shim.o: qoi_verilator_shim.c build/Vqoi_encoder__ALL.o build/Vqoi_decoder__ALL.o
 	g++ -I /usr/share/verilator/include -I build ${CFLAGS} $< -c -o $@
 
 ifdef VERILATED
 CFLAGS += -DQOI_FPGA_IMPLEMENTATION
-qoiconv qoibench fuzz: build/Vqoi_encoder__ALL.o build/verilated.o build/qoi_verilator_shim.o
-LDFLAGS += build/Vqoi_encoder__ALL.o build/verilated.o build/qoi_verilator_shim.o
+qoiconv qoibench fuzz: build/Vqoi_encoder__ALL.o build/Vqoi_decoder__ALL.o build/verilated.o build/qoi_verilator_shim.o
+LDFLAGS += build/Vqoi_encoder__ALL.o build/Vqoi_decoder__ALL.o build/verilated.o build/qoi_verilator_shim.o
 endif

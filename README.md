@@ -13,11 +13,13 @@ More info at https://qoiformat.org.
 Verilator will be able to adapt the functionality enough for it to be a
 drop in replacement for some of the reference implementation.
 
-Run `make VERILATED=1 test`, it will convert an image to qoi and then use the
+Run `make VERILATED=1 test_encode`, it will convert an image to qoi and then use the
 system converter to convert back (both ours and another reference .qoi). The
 md5sums of the resulting png files should match (it should mean all pixels
 survived being encoded), the md5sums of the .qoi files should also match if
 it's a full featured encoder.
+
+Run `make VERILATED=1 test_decode` for a similar test but for decoding.
 
 ## LiteX
 
