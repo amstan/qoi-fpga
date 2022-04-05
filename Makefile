@@ -43,7 +43,7 @@ clean:
 
 ## Verilog via Verilator
 
-# VFLAGS ?= -Wall
+VFLAGS ?= -Wall
 
  # These are inane, something as simple as (var == 25) ? : will warn with this on
 VFLAGS += -Wno-WIDTH

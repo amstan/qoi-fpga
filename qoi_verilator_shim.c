@@ -19,8 +19,6 @@ SOFTWARE. */
 // Contains drop-in replacement of qoi_{encode,decode} that use the verilog
 // implementation via verilator.
 
-#include <stdio.h>
-
 #define QOI_IMPLEMENTATION
 #define QOI_NO_STDIO // We just want the qoi aux internal headers
 #include "qoi.h"
@@ -29,6 +27,15 @@ SOFTWARE. */
 #include "Vqoi_encoder.h"
 #include "Vqoi_decoder.h"
 
+// #define DEBUG
+#ifdef DEBUG
+#include <stdio.h>
+#define qoi_debug(...) printf(__VA_ARGS__)
+#else
+#define qoi_debug(...)
+#endif
+
+#define QOI_CHUNK_MAX 5
 #define QOI_FPGA_ENCODER_POST_CYCLES 1
 
 int fpga_encode_chunk(Vqoi_encoder *v, qoi_rgba_t px, unsigned char *bytes, int *p) {
@@ -45,16 +52,16 @@ int fpga_encode_chunk(Vqoi_encoder *v, qoi_rgba_t px, unsigned char *bytes, int 
 	v->clk = 1;
 	v->eval();
 
-	printf("p=%d rgba=%08x %d ", *p, px.v, v->chunk_len);
+	qoi_debug("p=%d rgba=%08x %d ", *p, px.v, v->chunk_len);
 
 	for (i = 0; i < v->chunk_len; i++) {
 		bytes[(*p)++] = v->chunk[i];
-		printf("%02x", v->chunk[i]);
+		qoi_debug("%02x", v->chunk[i]);
 	}
-	printf("|");
-	for (;i < 5; i++)
-		printf("%02x", v->chunk[i]);
-	printf("\n");
+	qoi_debug("|");
+	for (;i < QOI_CHUNK_MAX; i++)
+		qoi_debug("%02x", v->chunk[i]);
+	qoi_debug("\n");
 
 	return v->chunk_len;
 }
@@ -129,18 +136,55 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 	return bytes;
 }
 
-int fpga_decode_chunk(Vqoi_decoder *v, const unsigned char *chunk, unsigned char * pixels, int *px_pos, int channels) {
-	*(qoi_rgba_t*)(pixels + *px_pos) = {0xff, 0xff, 0xff, 0xff};
-	*px_pos += channels;
+int fpga_decode_chunk(Vqoi_decoder *v, const unsigned char chunk[QOI_CHUNK_MAX], unsigned char **pixel_bytes, unsigned char *pixel_end, int channels) {
+	int run = 0;
 
-	return 1;
+	// Let the decoder peek at the next QOI_CHUNK_MAX chunks
+	v->eval();
+	for (int i = 0; i < QOI_CHUNK_MAX; i++)
+		v->chunk[i] = chunk[i];
+	v->eval();
+
+	do {
+		// Ask decoder for a pixel
+		v->clk = 0;
+		v->eval();
+		v->clk = 1;
+		v->eval();
+
+		// Make sure we don't overflow in the middle of a RUN
+		if (*pixel_bytes == pixel_end) break;
+
+		// Copy pixel to our buffer
+		(*(*pixel_bytes)++) = v->r;
+		(*(*pixel_bytes)++) = v->g;
+		(*(*pixel_bytes)++) = v->b;
+		if (channels == 4)
+			(*(*pixel_bytes)++) = v->a;
+
+		// As long as decoder is not bored of the current chunk and
+		// is spewing out pixels.
+		run++;
+	} while(!v->chunk_len_consumed);
+
+	// Some debugging
+	for (int i = 0; i < QOI_CHUNK_MAX; i++)
+		if (i < v->chunk_len_consumed)
+			qoi_debug("%02x", chunk[i]);
+		else
+			qoi_debug("  ");
+	qoi_debug(" => %02x%02x%02x%02x", v->r, v->g, v->b, v->a);
+	if (run > 1) qoi_debug("*%d", run);
+	qoi_debug("\n");
+
+	return v->chunk_len_consumed;
 }
 
 void *qoi_decode(const void *data, int size, qoi_desc *desc, int channels) {
 	const unsigned char *bytes;
 	unsigned int header_magic;
 	unsigned char *pixels;
-	int px_len, chunks_len, px_pos;
+	int px_len, chunks_len;
 	int p = 0;
 
 	if (
@@ -180,77 +224,26 @@ void *qoi_decode(const void *data, int size, qoi_desc *desc, int channels) {
 	}
 
 	chunks_len = size - (int)sizeof(qoi_padding);
-	px_pos = 0;
+	unsigned char *current_pixel = pixels;
+	unsigned char *pixel_end = pixels + px_len;
 
 	Vqoi_decoder *v = new Vqoi_decoder;
 	v->rst = 1;
+	v->clk = 0;
+	v->eval();
+	v->clk = 1;
 	v->eval();
 	v->rst = 0;
-	v->eval();
 
-	while ((p < chunks_len) && (px_pos < px_len)) {
+	while ((p < chunks_len) && (current_pixel < pixel_end)) {
+		const unsigned char *current_chunk = bytes + p;
+
+		qoi_debug("%d:", p);
 		int chunk_len_consumed =
-			fpga_decode_chunk(v, bytes + p, pixels, &px_pos, channels);
+			fpga_decode_chunk(v, current_chunk, &current_pixel, pixel_end, channels);
+
 		p += chunk_len_consumed;
 	}
-
-// 	for (px_pos = 0; px_pos < px_len; px_pos += channels) {
-// 		if (run > 0) {
-// 			run--;
-// 		}
-// 		else if (p < chunks_len) {
-// 			int b1 = bytes[p++];
-//
-// 			if (b1 == QOI_OP_RGB) {
-// 				px.rgba.r = bytes[p++];
-// 				px.rgba.g = bytes[p++];
-// 				px.rgba.b = bytes[p++];
-// 				printf("RGB %02x %02x %02x ", bytes[p-3], bytes[p-2], bytes[p-1]);
-// 			}
-// 			else if (b1 == QOI_OP_RGBA) {
-// 				px.rgba.r = bytes[p++];
-// 				px.rgba.g = bytes[p++];
-// 				px.rgba.b = bytes[p++];
-// 				px.rgba.a = bytes[p++];
-// 				printf("RGBA %02x %02x %02x %02x ", bytes[p-4], bytes[p-3], bytes[p-2], bytes[p-1]);
-// 			}
-// 			else if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
-// 				px = index[b1];
-// 				printf("INDEX %d ", b1);
-// 			}
-// 			else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
-// 				px.rgba.r += ((b1 >> 4) & 0x03) - 2;
-// 				px.rgba.g += ((b1 >> 2) & 0x03) - 2;
-// 				px.rgba.b += ( b1       & 0x03) - 2;
-// 				printf("DIFF %d %d %d ", ((b1 >> 4) & 0x03) - 2, ((b1 >> 2) & 0x03) - 2, (b1 & 0x03) - 2);
-// 			}
-// 			else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
-// 				int b2 = bytes[p++];
-// 				int vg = (b1 & 0x3f) - 32;
-// 				px.rgba.r += vg - 8 + ((b2 >> 4) & 0x0f);
-// 				px.rgba.g += vg;
-// 				px.rgba.b += vg - 8 +  (b2       & 0x0f);
-// 				printf("LUMA %d %d %d ", vg, vg - 8 + ((b2 >> 4) & 0x0f), vg - 8 +  (b2       & 0x0f));
-// 			}
-// 			else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
-// 				run = (b1 & 0x3f);
-// 				printf("RUN %d ", run);
-// 			}
-//
-// 			index[QOI_COLOR_HASH(px) % 64] = px;
-// 		}
-//
-// 		if (channels == 4) {
-// 			*(qoi_rgba_t*)(pixels + px_pos) = px;
-// 		}
-// 		else {
-// 			pixels[px_pos + 0] = px.rgba.r;
-// 			pixels[px_pos + 1] = px.rgba.g;
-// 			pixels[px_pos + 2] = px.rgba.b;
-// 		}
-//
-// 		printf("px = %08x\n", px.v);
-// 	}
 
 	return pixels;
 }

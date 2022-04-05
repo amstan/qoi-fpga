@@ -8,6 +8,8 @@ More info at https://qoiformat.org.
 
 ## Verilog
 
+Fully featured encoder and decoder, all QOI_OPs supported according to the spec.
+
 ### Testing
 
 Verilator will be able to adapt the functionality enough for it to be a
@@ -19,7 +21,7 @@ md5sums of the resulting png files should match (it should mean all pixels
 survived being encoded), the md5sums of the .qoi files should also match if
 it's a full featured encoder.
 
-Run `make VERILATED=1 test_decode` for a similar test but for decoding.
+Run `make VERILATED=1 test_decode` for a similar test for decoding.
 
 ## LiteX
 
@@ -28,8 +30,6 @@ Coming soon!
 ## Connections
 
 ### Encoder
-
-100% Implemented.
 
 #### Input
 
@@ -46,4 +46,13 @@ Not really sure how to deal with the variable length output from the encoder yet
 
 ### Decoder
 
-TODO
+#### Input
+A way to peek at the next chunk (5 bytes if RGBA, or 4 for just RGB).
+
+For every clock the decoder will output how many bytes it "ate",
+This value can be used to advance the peek pointer (or sometimes even stay
+in the same spot for a while in case of QUI_OP_RUN).
+
+#### Output
+
+One RGBA pixel per clock.
