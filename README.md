@@ -12,16 +12,17 @@ Fully featured encoder and decoder, all QOI_OPs supported according to the spec.
 
 ### Testing
 
-Verilator will be able to adapt the functionality enough for it to be a
-drop in replacement for some of the reference implementation.
+Verilator is able to emulate the fpga logic on a computer and is embeddable in C,
+enough for it to be a drop in qoi_{encode,decode} replacement for some of the
+reference implementation.
 
 Run `make VERILATED=1 test_encode`, it will convert an image to qoi and then use the
-system converter to convert back (both ours and another reference .qoi). The
+system converter to convert back (both ours and the reference .qoi). The
 md5sums of the resulting png files should match (it should mean all pixels
 survived being encoded), the md5sums of the .qoi files should also match if
 it's a full featured encoder.
 
-Run `make VERILATED=1 test_decode` for a similar test for decoding.
+Run `make VERILATED=1 test_decode` for a similar test exercising the decoding.
 
 ## LiteX
 
