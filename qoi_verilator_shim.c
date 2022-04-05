@@ -103,9 +103,11 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 
 	Vqoi_encoder *v = new Vqoi_encoder;
 	v->rst = 1;
+	v->clk = 0;
+	v->eval();
+	v->clk = 1;
 	v->eval();
 	v->rst = 0;
-	v->eval();
 
 	px_len = desc->width * desc->height * desc->channels;
 	channels = desc->channels;

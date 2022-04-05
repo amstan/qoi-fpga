@@ -34,9 +34,7 @@ wire signed[7:0] vg_r = vr - vg;
 wire signed[7:0] vg_b = vb - vg;
 
 // QOI_OP_RGBA
-reg[7:0] prev_a = 255;
-// TODO: figure out why this assignment is necessary despite the reset stuff
-// any value works here except 0
+reg[7:0] prev_a;
 
 // QOI_OP_RUN
 // We need to delay chunk output by one pixel because we cannot emit 2 chunks
@@ -51,7 +49,7 @@ reg[5:0] run;
 reg[31:0] index[63:0];
 wire[5:0] index_pos = r * 3 + g * 5 + b * 7 + a * 11;
 
-always @ (posedge clk, posedge rst) begin
+always @ (posedge clk) begin
 	if (is_repeating) begin /* QOI_OP_RUN */
 		// For debugging: uncomment. For power-saving: comment
 		next_chunk[0] <= {`QOI_OP_RUN, run}; // Dummy
@@ -112,7 +110,6 @@ always @ (posedge clk, posedge rst) begin
 	end
 
 	if (rst) begin
-		// TODO: Test this properly
 		prev_r <= 0;
 		prev_g <= 0;
 		prev_b <= 0;
