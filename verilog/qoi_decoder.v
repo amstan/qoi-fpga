@@ -66,7 +66,7 @@ always @ * begin
 		next_chunk_len_consumed = 5;
 
 	end else if (shortop == `QOI_OP_INDEX) begin
-		{next_r, next_g, next_b, next_a} = index[chunk[0][6:0]];
+		{next_r, next_g, next_b, next_a} = index[chunk[0][5:0]];
 		next_chunk_len_consumed = 1;
 
 	end else if (shortop == `QOI_OP_DIFF) begin
