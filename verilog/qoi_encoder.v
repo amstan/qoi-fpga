@@ -83,7 +83,7 @@ always @ (posedge clk) begin
 		vg_b >  -9 && vg_b <  8
 	) begin
 		next_chunk[0] <= {`QOI_OP_LUMA, 6'(vg + 32)};
-		next_chunk[1] <= {4'(vg_r + 8), 4'(vg_b +  8)};
+		next_chunk[1] <= {4'(vg_r + 8), 4'(vg_b + 8)};
 		next_chunk_len <= 2;
 
 	end else begin

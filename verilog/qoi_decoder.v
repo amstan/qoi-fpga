@@ -102,7 +102,6 @@ always @ * begin
 		{next_r, next_g, next_b, next_a} = 'h_deadbeef;
 		next_chunk_len_consumed = 0;
 	end
-
 end
 
 always @ (posedge clk) begin
