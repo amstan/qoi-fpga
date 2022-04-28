@@ -18,7 +18,7 @@ module qoi_decoder(
 	output wire[7:0] a
 );
 
-wire[7:0] shortop = chunk[0][7:6];
+wire[2:0] shortop = chunk[0][7:6];
 
 reg[7:0] next_r;
 reg[7:0] next_g;
