@@ -1,4 +1,7 @@
 CFLAGS += -I/usr/include/stb/ -Wall -Wno-unused-function
+ifdef DEBUG
+CFLAGS += -DDEBUG
+endif
 
 .PHONY: all
 all: qoiconv qoibench

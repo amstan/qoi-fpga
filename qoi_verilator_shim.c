@@ -27,7 +27,6 @@ SOFTWARE. */
 #include "Vqoi_encoder.h"
 #include "Vqoi_decoder.h"
 
-// #define DEBUG
 #ifdef DEBUG
 #include <stdio.h>
 #define qoi_debug(...) printf(__VA_ARGS__)
