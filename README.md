@@ -36,6 +36,10 @@ Coming soon!
 
 The `rgba` pixel data with a `clk`.
 
+If image is in 3 channel mode, an alpha of `0xff` must still be provided as
+encoder is always in 4 channel mode. Though if the alpha does not change from
+`0xff` as it's encoding, it will produce only 3 channel QOI_OPs.
+
 #### Output
 
 The encoder will usually output a whole QOI `chunk` (1-5 bytes), though delayed

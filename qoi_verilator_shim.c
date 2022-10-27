@@ -119,6 +119,7 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 			px.rgba.r = pixels[px_pos + 0];
 			px.rgba.g = pixels[px_pos + 1];
 			px.rgba.b = pixels[px_pos + 2];
+			px.rgba.a = 255;
 		}
 
 		fpga_encode_chunk(v, px, bytes, &p);
