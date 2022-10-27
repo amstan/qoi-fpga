@@ -34,13 +34,17 @@ Coming soon!
 
 #### Input
 
-This is just the RGBA pixel data with a clock.
+The `rgba` pixel data with a `clk`.
 
 #### Output
 
-The encoder will usually output a whole QOI chunk (1-5 bytes), though delayed
-by one clock cycle (to account for any QUI_OP_RUN). If Alpha is not needed
+The encoder will usually output a whole QOI `chunk` (1-5 bytes), though delayed
+by one clock cycle (to account for any QOI_OP_RUN). If Alpha is not needed
 the max chunk size is 4 bytes, which might fit in a single memory transaction.
+
+`chunk_len` specifies how many bytes the current `chunk` contains, could be
+0 bytes in case of QOI_OP_RUN for many pixels, could be as high as 5 when
+we have a fresh RGBA pixel.
 
 This will eventually need to connect to some kind of bus like AXI or Avalon.
 Not really sure how to deal with the variable length output from the encoder yet.
@@ -48,11 +52,13 @@ Not really sure how to deal with the variable length output from the encoder yet
 ### Decoder
 
 #### Input
-A way to peek at the next chunk (5 bytes if RGBA, or 4 for just RGB).
+A way to peek at the next `chunk` (5 bytes if RGBA, or 4 for just RGB).
 
-For every clock the decoder will output how many bytes it "ate",
+For every clock the decoder will output how many bytes it "ate" via
+`chunk_len_consumed`,
+
 This value can be used to advance the peek pointer (or sometimes even stay
-in the same spot for a while in case of QUI_OP_RUN).
+in the same spot for a while in case of QOI_OP_RUN).
 
 #### Output
 
