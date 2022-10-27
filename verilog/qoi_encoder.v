@@ -11,6 +11,8 @@ module qoi_encoder(
 	input wire[7:0] b,
 	input wire[7:0] a,
 
+	input wire finish,
+
 	input wire clk,
 	input wire rst,
 
@@ -39,7 +41,8 @@ reg[7:0] prev_a;
 // QOI_OP_RUN
 // We need to delay chunk output by one pixel because we cannot emit 2 chunks
 // per pixel like software does when the run ends.
-wire is_repeating = {prev_r, prev_g, prev_b, prev_a} == px;
+reg prev_finish; // aka past-end
+wire is_repeating = ({prev_r, prev_g, prev_b, prev_a} == px) && !finish;
 reg[7:0] next_chunk[4:0];
 reg[2:0] next_chunk_len;
 reg[5:0] run;
@@ -50,7 +53,7 @@ reg[31:0] index[63:0];
 wire[5:0] index_pos = r * 3 + g * 5 + b * 7 + a * 11;
 
 always @ (posedge clk) begin
-	if (is_repeating) begin /* QOI_OP_RUN */
+	if (is_repeating) begin : start_and_midde_OP_RUN
 		// For debugging: uncomment. For power-saving: comment
 		next_chunk[0] <= {`QOI_OP_RUN, run}; // Dummy
 		// This chunk is not over, let output know not to expect anything yet
@@ -98,15 +101,22 @@ always @ (posedge clk) begin
 	prev_g <= g;
 	prev_b <= b;
 	prev_a <= a;
+	prev_finish <= finish;
 
 	index[index_pos] <= px;
 
 	chunk <= next_chunk;
 	chunk_len <= next_chunk_len;
-	if (((run > 0) && !is_repeating) || (run == 62)) begin
+	if (((run > 0) && !is_repeating) || (run == 62)) begin : commit_OP_RUN
 		run <= is_repeating; // count the current repeat, otherwise start from 0
 		chunk[0] <= {`QOI_OP_RUN, 6'(run - 1)};
 		chunk_len <= 1;
+	end : commit_OP_RUN
+
+	if (prev_finish) begin
+		// to be nice, make sure we don't output extra bogus chunks after we
+		// emitted the last real chunk shortly after the last pixel in the stream
+		chunk_len <= 0;
 	end
 
 	if (rst) begin

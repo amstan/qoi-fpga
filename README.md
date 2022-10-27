@@ -40,6 +40,9 @@ If image is in 3 channel mode, an alpha of `0xff` must still be provided as
 encoder is always in 4 channel mode. Though if the alpha does not change from
 `0xff` as it's encoding, it will produce only 3 channel QOI_OPs.
 
+On the next clock after the last pixel please send a high `finish` so the
+encoder can immediatelly commit any QOI_OP_RUN that are in progress.
+
 #### Output
 
 The encoder will usually output a whole QOI `chunk` (1-5 bytes), though delayed

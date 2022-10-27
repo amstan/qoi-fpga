@@ -35,7 +35,6 @@ SOFTWARE. */
 #endif
 
 #define QOI_CHUNK_MAX 5
-#define QOI_FPGA_ENCODER_POST_CYCLES 1
 
 int fpga_encode_chunk(Vqoi_encoder *v, qoi_rgba_t px, unsigned char *bytes, int *p) {
 	int i;
@@ -124,11 +123,12 @@ void *qoi_encode(const void *data, const qoi_desc *desc, int *out_len) {
 
 		fpga_encode_chunk(v, px, bytes, &p);
 	}
+	qoi_debug("last pixel ^^^\n");
 
-	for (i = 0; i < QOI_FPGA_ENCODER_POST_CYCLES; i++) {
-		px.v = 0xfeedbeef; /* send dummy pixels now */
-		fpga_encode_chunk(v, px, bytes, &p);
-	}
+	// signal encoder that we're done
+	v->finish = 1;
+	// but keep reading while there's still chunks in there
+	while (fpga_encode_chunk(v, px /* don't care */, bytes, &p));
 
 	for (i = 0; i < (int)sizeof(qoi_padding); i++) {
 		bytes[p++] = qoi_padding[i];
