@@ -51,18 +51,21 @@ VFLAGS ?= -Wall
  # These are inane, something as simple as (var == 25) ? : will warn with this on
 VFLAGS += -Wno-WIDTH
 
-build/V%__ALL.o: verilog/%.v
-	# Generate the verilator makefile + cpp then compile it
+build/V%__ALL.o build/V%.h: verilog/%.v
 	verilator $(VFLAGS) -cc $< --Mdir build/ --build
 
-build/verilated.o: /usr/share/verilator/include/verilated.cpp
-	g++ -I /usr/share/verilator/include -I build $^ -c -o $@
+build/verilated%o: /usr/share/verilator/include/verilated%cpp
+	g++ $^ -c -o $@
 
-build/qoi_verilator_shim.o: qoi_verilator_shim.c build/Vqoi_encoder__ALL.o build/Vqoi_decoder__ALL.o
+build/qoi_verilator_shim.o: qoi_verilator_shim.c build/Vqoi_encoder.h build/Vqoi_decoder.h
 	g++ -I /usr/share/verilator/include -I build ${CFLAGS} $< -c -o $@
+
+FPGA_DEPS = build/Vqoi_encoder__ALL.o build/Vqoi_decoder__ALL.o
+FPGA_DEPS += build/verilated.o build/verilated_threads.o
+FPGA_DEPS += build/qoi_verilator_shim.o
 
 ifdef VERILATED
 CFLAGS += -DQOI_FPGA_IMPLEMENTATION
-qoiconv qoibench fuzz: build/Vqoi_encoder__ALL.o build/Vqoi_decoder__ALL.o build/verilated.o build/qoi_verilator_shim.o
-LDFLAGS += build/Vqoi_encoder__ALL.o build/Vqoi_decoder__ALL.o build/verilated.o build/qoi_verilator_shim.o
+qoiconv qoibench fuzz: $(FPGA_DEPS)
+LDFLAGS += $(FPGA_DEPS)
 endif
